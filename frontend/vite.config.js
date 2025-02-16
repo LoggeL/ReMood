@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: '../backend/static',
       emptyOutDir: true,
+      assetsDir: 'assets',
     },
     server: {
       port: parseInt(env.FRONTEND_PORT || 5173),

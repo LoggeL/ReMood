@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Form, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -318,6 +319,18 @@ async def update_mood_entry(
     return MoodEntryResponse(**{**db_entry.__dict__, "username": current_user.username})
 
 
-# Mount static files
+# Static files handling
 static_dir = Path(__file__).parent / "static"
-app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+
+# Serve static files
+app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
+
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # API endpoints are handled by their respective route handlers
+    if full_path.startswith("api/") or full_path == "token" or full_path == "register":
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # For all other routes, serve the index.html
+    return FileResponse(str(static_dir / "index.html"))
