@@ -4,6 +4,8 @@
 
 ReMood ist eine moderne, sichere und benutzerfreundliche Web-Anwendung zum Tracking deiner täglichen Stimmung. Mit einem Fokus auf Privatsphäre und Benutzerfreundlichkeit bietet ReMood eine intuitive Plattform zur Dokumentation und Analyse deiner emotionalen Reise.
 
+![ReMood Screenshot](.github/assets/Screenshot.png)
+
 ## ✨ Features
 
 ### 📝 Stimmungstracking
