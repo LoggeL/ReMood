@@ -128,7 +128,7 @@ cd frontend
 npm run build
 ```
 
-## �� Beitragen
+## 🤝 Beitragen
 
 1. Fork das Repository
 2. Erstelle einen Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -151,5 +151,3 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe die [LICENSE](LICENSE
 Bei Fragen oder Problemen:
 
 - Erstelle ein Issue im Repository
-- Kontaktiere uns über [Kontaktformular/Email]
-- Besuche unsere [Dokumentation/Wiki]
