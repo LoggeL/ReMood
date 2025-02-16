@@ -1,5 +1,7 @@
 # ReMood - Dein persönlicher Stimmungstracker 🌈
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ReMood ist eine moderne, sichere und benutzerfreundliche Web-Anwendung zum Tracking deiner täglichen Stimmung. Mit einem Fokus auf Privatsphäre und Benutzerfreundlichkeit bietet ReMood eine intuitive Plattform zur Dokumentation und Analyse deiner emotionalen Reise.
 
 ## ✨ Features
