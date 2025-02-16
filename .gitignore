@@ -38,3 +38,9 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db 
+
+# Frontend
+backend/node_modules/
+backend/dist/
+backend/static/
+

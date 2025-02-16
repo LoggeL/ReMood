@@ -10,6 +10,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
@@ -318,4 +319,5 @@ async def update_mood_entry(
 
 
 # Mount static files
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+static_dir = Path(__file__).parent / "static"
+app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
