@@ -39,8 +39,12 @@ wheels/
 .DS_Store
 Thumbs.db 
 
-# Frontend
+# Backend
 backend/node_modules/
 backend/dist/
 backend/static/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/static/
