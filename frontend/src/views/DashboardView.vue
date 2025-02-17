@@ -1,30 +1,5 @@
 <template>
   <div id="entries-container">
-    <div class="tabs">
-      <div class="tab-buttons">
-        <button
-          class="tab-btn"
-          :class="{ active: $route.name === 'entries' }"
-          @click="$router.push({ name: 'entries' })"
-        >
-          Meine Einträge
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: $route.name === 'dashboard' }"
-          @click="$router.push({ name: 'dashboard' })"
-        >
-          Dashboard
-        </button>
-      </div>
-      <button
-        class="new-entry-btn"
-        @click="$router.push({ name: 'new-entry' })"
-      >
-        <span class="nav-icon">➕</span> Neuer Eintrag
-      </button>
-    </div>
-
     <div v-if="isLoading" class="loading">Lade Dashboard...</div>
     <div v-else-if="error" class="error">
       {{ error }}
@@ -72,14 +47,23 @@
 
         <div class="chart-container">
           <h3>Stimmungsverlauf</h3>
-          <Line :data="moodTrendData" :options="moodTrendOptions" />
+          <div class="chart-wrapper">
+            <Line
+              v-if="chartData.mood"
+              :data="chartData.mood"
+              :options="chartOptions.mood"
+            />
+          </div>
         </div>
         <div class="chart-container">
           <h3>Stimmungsverteilung</h3>
-          <Doughnut
-            :data="moodDistributionData"
-            :options="moodDistributionOptions"
-          />
+          <div class="chart-wrapper">
+            <Doughnut
+              v-if="chartData.distribution"
+              :data="chartData.distribution"
+              :options="chartOptions.distribution"
+            />
+          </div>
         </div>
         <div class="stats-container">
           <div class="stat-card">
@@ -126,10 +110,13 @@
         </div>
         <div class="chart-container">
           <h3>Kategorieverteilung</h3>
-          <Pie
-            :data="categoryDistributionData"
-            :options="categoryDistributionOptions"
-          />
+          <div class="chart-wrapper">
+            <Doughnut
+              v-if="chartData.categories"
+              :data="chartData.categories"
+              :options="chartOptions.categories"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -138,8 +125,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Line, Doughnut, Pie } from 'vue-chartjs'
-import { useEntriesStore } from '../stores/entries'
+import { Line, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -149,8 +135,13 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
   ArcElement,
+  TimeScale,
 } from 'chart.js'
+import 'chartjs-adapter-date-fns'
+import { de } from 'date-fns/locale'
+import { useEntriesStore } from '../stores/entries'
 
 ChartJS.register(
   CategoryScale,
@@ -160,8 +151,13 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  ArcElement
+  Filler,
+  ArcElement,
+  TimeScale
 )
+
+// Set German locale for date-fns
+ChartJS.defaults.locale = de
 
 const entriesStore = useEntriesStore()
 const entries = ref([])
@@ -225,6 +221,219 @@ const categoryStats = computed(() => {
   }
 })
 
+// Chart Data
+const chartData = computed(() => {
+  const sortedEntries = [...entries.value].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  )
+
+  // Mood trend data
+  const moodData = {
+    datasets: [
+      {
+        label: 'Stimmung',
+        data: sortedEntries.map((entry) => ({
+          x: new Date(entry.date),
+          y: entry.mood_score,
+        })),
+        fill: true,
+        borderColor: '#4a90e2',
+        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+        tension: 0.4,
+      },
+    ],
+  }
+
+  // Mood distribution data
+  const moodCounts = entries.value.reduce((acc, entry) => {
+    acc[entry.mood_score] = (acc[entry.mood_score] || 0) + 1
+    return acc
+  }, {})
+
+  const distributionData = {
+    labels: [1, 2, 3, 4, 5].map((score) => `${score} ${getMoodEmoji(score)}`),
+    datasets: [
+      {
+        data: [1, 2, 3, 4, 5].map((score) => moodCounts[score] || 0),
+        backgroundColor: [
+          '#e74c3c',
+          '#e67e22',
+          '#f1c40f',
+          '#2ecc71',
+          '#3498db',
+        ],
+      },
+    ],
+  }
+
+  // Category distribution data
+  const categoryCounts = entries.value.reduce((acc, entry) => {
+    acc[entry.category] = (acc[entry.category] || 0) + 1
+    return acc
+  }, {})
+
+  const categories = {
+    work: 'Arbeit',
+    family: 'Familie',
+    health: 'Gesundheit',
+    social: 'Soziales',
+    personal: 'Persönlich',
+    general: 'Allgemein',
+  }
+
+  const colors = {
+    work: '#e67e22',
+    family: '#3498db',
+    health: '#2ecc71',
+    social: '#9b59b6',
+    personal: '#f1c40f',
+    general: '#95a5a6',
+  }
+
+  const categoryData = {
+    labels: Object.keys(categories).map((key) => {
+      const label = categories[key]
+      if (key === categoryStats.value.best.category) {
+        return `${label} 🌟`
+      } else if (key === categoryStats.value.worst.category) {
+        return `${label} ⚠️`
+      }
+      return label
+    }),
+    datasets: [
+      {
+        data: Object.keys(categories).map((key) => categoryCounts[key] || 0),
+        backgroundColor: Object.keys(categories).map((key) => {
+          if (key === categoryStats.value.best.category) {
+            return '#2ecc71' // Success color for best category
+          } else if (key === categoryStats.value.worst.category) {
+            return '#e74c3c' // Error color for worst category
+          }
+          return colors[key]
+        }),
+        borderWidth: Object.keys(categories).map((key) =>
+          key === categoryStats.value.best.category ||
+          key === categoryStats.value.worst.category
+            ? 2
+            : 0
+        ),
+        borderColor: Object.keys(categories).map((key) =>
+          key === categoryStats.value.best.category
+            ? '#27ae60'
+            : key === categoryStats.value.worst.category
+            ? '#c0392b'
+            : 'transparent'
+        ),
+      },
+    ],
+  }
+
+  return {
+    mood: moodData,
+    distribution: distributionData,
+    categories: categoryData,
+  }
+})
+
+// Chart Options
+const chartOptions = computed(() => ({
+  mood: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.raw.y} ${getMoodEmoji(context.raw.y)}`,
+          title: (context) => {
+            const date = new Date(context[0].raw.x)
+            return date.toLocaleDateString('de-DE', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: {
+          unit: 'day',
+          displayFormats: {
+            day: 'dd.MM.yy',
+          },
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+        },
+      },
+      y: {
+        min: 1,
+        max: 5,
+        ticks: {
+          stepSize: 1,
+          callback: (value) => `${value} ${getMoodEmoji(value)}`,
+        },
+      },
+    },
+    animation: false,
+  },
+  distribution: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    animation: false,
+  },
+  categories: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          font: {
+            size: 12,
+          },
+          padding: 15,
+          generateLabels: (chart) => {
+            const data = chart.data
+            if (data.labels.length && data.datasets.length) {
+              return data.labels.map((label, i) => ({
+                text: label,
+                fillStyle: data.datasets[0].backgroundColor[i],
+                strokeStyle: data.datasets[0].borderColor[i],
+                lineWidth: data.datasets[0].borderWidth[i],
+                hidden: false,
+                index: i,
+              }))
+            }
+            return []
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const value = context.raw || 0
+            return `${value} Einträge`
+          },
+        },
+      },
+    },
+    animation: false,
+  },
+}))
+
 // Add computed property for mood boost recommendations
 const moodBoostRecommendations = computed(() => {
   if (!entries.value.length) return []
@@ -272,156 +481,6 @@ const moodBoostRecommendations = computed(() => {
   return recommendations.slice(0, 3) // Limit to 3 recommendations
 })
 
-// Chart Data
-const moodTrendData = computed(() => {
-  const sortedEntries = [...entries.value].sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
-  )
-  return {
-    labels: sortedEntries.map((entry) =>
-      new Date(entry.date).toLocaleDateString('de-DE')
-    ),
-    datasets: [
-      {
-        label: 'Stimmung',
-        data: sortedEntries.map((entry) => entry.mood_score),
-        borderColor: '#4a90e2',
-        backgroundColor: 'rgba(74, 144, 226, 0.1)',
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  }
-})
-
-const moodTrendOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    y: {
-      min: 1,
-      max: 5,
-      ticks: {
-        stepSize: 1,
-        callback: (value) => value + ' ' + getMoodEmoji(value),
-        color: 'var(--text-color)',
-      },
-      grid: {
-        color: 'var(--border-color)',
-        drawBorder: false,
-      },
-    },
-    x: {
-      ticks: {
-        color: 'var(--text-color)',
-      },
-      grid: {
-        display: false,
-      },
-    },
-  },
-  plugins: {
-    title: {
-      display: true,
-      text: 'Stimmungsverlauf über Zeit',
-      color: 'var(--text-color)',
-    },
-    legend: {
-      labels: {
-        color: 'var(--text-color)',
-      },
-    },
-  },
-}
-
-const moodDistributionData = computed(() => {
-  const moodCounts = entries.value.reduce((acc, entry) => {
-    acc[entry.mood_score] = (acc[entry.mood_score] || 0) + 1
-    return acc
-  }, {})
-
-  return {
-    labels: [1, 2, 3, 4, 5].map((score) => score + ' ' + getMoodEmoji(score)),
-    datasets: [
-      {
-        data: [1, 2, 3, 4, 5].map((score) => moodCounts[score] || 0),
-        backgroundColor: [
-          '#e74c3c',
-          '#e67e22',
-          '#f1c40f',
-          '#2ecc71',
-          '#3498db',
-        ],
-      },
-    ],
-  }
-})
-
-const moodDistributionOptions = {
-  responsive: true,
-  plugins: {
-    title: {
-      display: true,
-      text: 'Verteilung der Stimmungen',
-      color: 'var(--text-color)',
-    },
-    legend: {
-      labels: {
-        color: 'var(--text-color)',
-      },
-    },
-  },
-}
-
-const categoryDistributionData = computed(() => {
-  const categoryCounts = entries.value.reduce((acc, entry) => {
-    acc[entry.category] = (acc[entry.category] || 0) + 1
-    return acc
-  }, {})
-
-  const categories = {
-    work: 'Arbeit',
-    family: 'Familie',
-    health: 'Gesundheit',
-    social: 'Soziales',
-    personal: 'Persönlich',
-    general: 'Allgemein',
-  }
-
-  return {
-    labels: Object.keys(categories).map((key) => categories[key]),
-    datasets: [
-      {
-        data: Object.keys(categories).map((key) => categoryCounts[key] || 0),
-        backgroundColor: [
-          '#e67e22',
-          '#3498db',
-          '#2ecc71',
-          '#9b59b6',
-          '#f1c40f',
-          '#95a5a6',
-        ],
-      },
-    ],
-  }
-})
-
-const categoryDistributionOptions = {
-  responsive: true,
-  plugins: {
-    title: {
-      display: true,
-      text: 'Verteilung nach Kategorien',
-      color: 'var(--text-color)',
-    },
-    legend: {
-      labels: {
-        color: 'var(--text-color)',
-      },
-    },
-  },
-}
-
 function getMoodEmoji(score) {
   return entriesStore.getMoodEmoji(score)
 }
@@ -438,19 +497,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tab-buttons {
-  display: flex;
-  gap: 10px;
-}
-
 .loading,
 .error {
   text-align: center;
@@ -482,13 +528,18 @@ onMounted(async () => {
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   position: relative;
-  height: 300px;
+  height: 400px;
 }
 
 .chart-container h3 {
   color: var(--text-color);
   margin-bottom: 15px;
   font-size: 1.1rem;
+}
+
+.chart-wrapper {
+  height: calc(100% - 45px); /* Container height minus header and padding */
+  position: relative;
 }
 
 .stats-container {
@@ -621,10 +672,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .tabs {
-    display: none;
-  }
-
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -646,8 +693,7 @@ onMounted(async () => {
   }
 
   .chart-container {
-    height: 400px;
-    margin-bottom: 30px;
+    height: 350px;
   }
 }
 </style>

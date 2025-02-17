@@ -59,7 +59,8 @@ const weekGroups = computed(() => {
 function getWeekStart(date) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - d.getDay()) // Set to Sunday
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)) // Set to Monday
   return d
 }
 
