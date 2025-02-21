@@ -92,7 +92,12 @@
               <span class="mood-emoji">{{
                 getMoodEmoji(entry.mood_score)
               }}</span>
-              <span class="username">@{{ entry.username }}</span>
+              <a
+                class="username"
+                @click.prevent="loadUserFeed(entry.username)"
+                href="#"
+                >@{{ entry.username }}</a
+              >
               <span v-if="entry.is_breakdown" class="breakdown-badge">
                 <span class="breakdown-icon">💔</span> Breakdown
               </span>
@@ -646,6 +651,13 @@ onMounted(() => {
 .username {
   color: var(--primary-color);
   font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.username:hover {
+  opacity: 0.8;
 }
 
 .date {
